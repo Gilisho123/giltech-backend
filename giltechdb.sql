@@ -1,0 +1,11 @@
+CREATE DATABASE IF NOT EXISTS giltechdb;
+USE giltechdb;
+
+CREATE TABLE IF NOT EXISTS service_requests (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100),
+  phone VARCHAR(20),
+  service VARCHAR(100),
+  file_name VARCHAR(255),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

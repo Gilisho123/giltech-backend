@@ -1,0 +1,26 @@
+# Example Render manifest to deploy the Giltech backend
+# Instructions:
+# 1) Create a new Web Service on Render and connect your GitHub repository.
+# 2) Copy this file to the repo root (it's already here) and Render will use it.
+
+services:
+  - type: web_service
+    name: giltech-backend
+    env: node
+    plan: free
+    branch: main
+    buildCommand: ""
+    startCommand: "node server.js"
+    envVars:
+      - key: DB_HOST
+        value: <your-db-host> # or use Render's managed database
+      - key: DB_USER
+        value: <db-user>
+      - key: DB_PASS
+        value: <db-pass>
+      - key: DB_NAME
+        value: giltechdb
+      - key: JWT_SECRET
+        value: <strong-secret>
+      - key: ADMIN_TOKEN
+        value: testtoken

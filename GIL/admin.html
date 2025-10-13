@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin Dashboard — Giltech Online Cyber</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .admin-controls { display:flex; gap:12px; align-items:center; margin-bottom:12px }
+    .admin-grid { display:flex; gap:12px; margin-bottom:16px }
+    .admin-grid .card { background:#fff; padding:12px; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,.06) }
+    table { width:100%; border-collapse:collapse; background:#fff }
+    th,td { border:1px solid #eee; padding:8px; text-align:left }
+    .token-input { padding:6px; border-radius:4px; border:1px solid #ccc }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="index.html">GILTECH</a>
+      <nav id="nav" class="nav">
+        <a href="index.html">Home</a>
+        <a href="services.html">Services</a>
+        <a href="about.html">About</a>
+        <a href="blog.html">Blog</a>
+        <a href="contact.html">Contact</a>
+      </nav>
+      <div class="actions">
+        <button id="requestBtn" class="btn primary">Request Service</button>
+        <button id="hamburger" class="hamburger" aria-label="Toggle menu">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <h1>Admin Dashboard</h1>
+
+    <!-- Login panel -->
+    <div id="adminLogin" class="card">
+      <p>Enter Admin token to sign in:</p>
+      <div class="row">
+        <input id="adminToken" class="token-input" placeholder="paste ADMIN_TOKEN" />
+        <button id="loginBtn" class="btn primary">Sign in</button>
+        <button id="logoutBtn" class="btn hidden">Sign out</button>
+      </div>
+      <div class="mt-8"><small>Tip: paste the same ADMIN_TOKEN used by the server for quick tests.</small></div>
+    </div>
+
+    <div id="adminControls" class="admin-controls hidden">
+      <button id="saveToken" class="btn">Save token</button>
+      <button id="loadBtn" class="btn primary">Load requests</button>
+    </div>
+
+    <div id="adminMessage" class="modal-message admin-message"></div>
+
+    <div class="admin-grid">
+      <div class="card"><h3>Total Requests</h3><p id="stat-requests">—</p></div>
+      <div class="card"><h3>Successful</h3><p id="stat-success">—</p></div>
+      <div class="card"><h3>Pending</h3><p id="stat-pending">—</p></div>
+    </div>
+
+    <section class="admin-dashboard">
+      <h2>Service Requests</h2>
+      <table id="requestsTable">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Phone</th>
+            <th>Service</th>
+            <th>File</th>
+            <th>Created</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div>
+          <h4>Giltech Online Cyber</h4>
+          <p>Fast, reliable & secure digital services. Nairobi, Kenya.</p>
+        </div>
+        <div>
+          <h5>Quick Links</h5>
+          <nav class="footer-nav">
+            <a href="index.html">Home</a>
+            <a href="services.html">Services</a>
+            <a href="about.html">About</a>
+            <a href="contact.html">Contact</a>
+            <a href="signup.html">Sign up</a>
+            <a href="admin_signin.html">Admin login</a>
+          </nav>
+        </div>
+        <div>
+          <h5>Contact</h5>
+          <p>0758 220 554</p>
+          <p>info@giltechonlinecyber.co.ke</p>
+        </div>
+      </div>
+      <div class="copyright">© Giltech Online Cyber 2025</div>
+    </div>
+  </footer>
+
+  <script>
+    // Simple admin client to fetch /api/requests with optional token stored in sessionStorage
+    const adminTokenInput = document.getElementById('adminToken');
+    const saveBtn = document.getElementById('saveToken');
+    const loadBtn = document.getElementById('loadBtn');
+
+    // restore saved token
+    adminTokenInput.value = sessionStorage.getItem('ADMIN_TOKEN') || '';
+    const adminMessage = document.getElementById('adminMessage');
+    function showMessage(msg, isError = true) {
+      adminMessage.style.display = msg ? 'block' : 'none';
+      adminMessage.style.color = isError ? '#b00' : '#060';
+      adminMessage.innerText = msg || '';
+    }
+
+    const loginBtn = document.getElementById('loginBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const adminControls = document.getElementById('adminControls');
+    const adminLogin = document.getElementById('adminLogin');
+
+    saveBtn.addEventListener('click', () => {
+      sessionStorage.setItem('ADMIN_TOKEN', adminTokenInput.value.trim());
+      showMessage('Token saved to sessionStorage', false);
+    });
+
+    loadBtn.addEventListener('click', () => loadRequests());
+
+    logoutBtn.addEventListener('click', () => {
+      sessionStorage.removeItem('ADMIN_TOKEN');
+      adminLogin.classList.remove('hidden');
+      adminControls.classList.add('hidden');
+      logoutBtn.classList.add('hidden');
+      showMessage('Signed out', false);
+    });
+
+    // Sign-in flow: validate token by attempting to fetch requests
+    loginBtn.addEventListener('click', async () => {
+      const token = adminTokenInput.value.trim();
+      if (!token) { showMessage('Please enter the admin token'); return; }
+      sessionStorage.setItem('ADMIN_TOKEN', token);
+      showMessage('Signing in...', false);
+      try {
+        const API_BASE = (window.location.protocol === 'file:') ? 'http://localhost:5000' : window.location.origin;
+        const res = await fetch(API_BASE + '/api/requests', { headers: { Authorization: 'Bearer ' + token } });
+        if (!res.ok) {
+          let body = '';
+          try { body = JSON.stringify(await res.json()); } catch (e) { body = res.statusText || ''; }
+          showMessage(`Sign-in failed: ${res.status} ${body}`);
+          return;
+        }
+        // success: show controls and hide login
+        adminLogin.classList.add('hidden');
+        adminControls.classList.remove('hidden');
+        logoutBtn.classList.remove('hidden');
+        showMessage('Signed in', false);
+        // preload results into table
+        const data = await res.json();
+        populateTable(data);
+      } catch (err) {
+        console.error('Sign-in error', err);
+        showMessage('Sign-in error; see console');
+      }
+    });
+
+    async function loadRequests() {
+      try {
+        showMessage('Loading requests...', false);
+        const token = sessionStorage.getItem('ADMIN_TOKEN');
+        const headers = {};
+        if (token) headers['Authorization'] = 'Bearer ' + token;
+
+  // resolve API base: when the page is opened via file:// use localhost:5000, otherwise use the page origin
+  const API_BASE = (window.location.protocol === 'file:') ? 'http://localhost:5000' : window.location.origin;
+  const res = await fetch(API_BASE + '/api/requests', { headers });
+        if (!res.ok) {
+          // Try to parse JSON error body
+          let body = '';
+          try { body = JSON.stringify(await res.json()); } catch (e) { body = res.statusText || ''; }
+          console.error('Failed:', res.status, body);
+          showMessage(`Failed to load requests: ${res.status} ${body}`);
+          return;
+        }
+        const data = await res.json();
+
+        populateTable(data);
+        showMessage('Loaded ' + (Array.isArray(data) ? data.length : 0) + ' requests', false);
+      } catch (err) {
+        console.error('⚠️ Error loading requests:', err);
+        showMessage('Error loading requests; see console.');
+      }
+    }
+
+    function populateTable(data) {
+      if (!Array.isArray(data)) return;
+      // Update stats and table
+      document.getElementById('stat-requests').innerText = data.length;
+      document.getElementById('stat-success').innerText = data.filter(d=>d.status==='success').length || 0;
+      document.getElementById('stat-pending').innerText = data.filter(d=>d.status==='pending').length || 0;
+
+      const tableBody = document.querySelector('#requestsTable tbody');
+      tableBody.innerHTML = '';
+      data.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${r.id}</td>
+          <td>${r.name || ''}</td>
+          <td>${r.phone || ''}</td>
+          <td>${r.service || ''}</td>
+          <td>${r.file_name ? `<a href="${API_BASE}/uploads/${r.file_name}" target="_blank">${r.file_name}</a>` : '-'}</td>
+          <td>${r.created_at ? new Date(r.created_at).toLocaleString() : ''}</td>
+        `;
+        tableBody.appendChild(tr);
+      });
+    }
+
+    // Auto-load on open if token exists
+    if (adminTokenInput.value && adminTokenInput.value.trim()) {
+      // slight delay so the page paints first
+      setTimeout(() => loadRequests(), 250);
+    }
+  </script>
+</body>
+</html>
