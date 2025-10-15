@@ -1,25 +1,16 @@
-import mysql from "mysql2/promise";
-import dotenv from "dotenv";
+# db.py
+import os
+import mysql.connector
+from dotenv import load_dotenv
 
-dotenv.config();
+# Load environment variables from .env file (important for local testing)
+load_dotenv()
 
-const pool = mysql.createPool({
-  host: process.env.DB_HOST || "localhost",
-  user: process.env.DB_USER || "root",
-  password: process.env.DB_PASS || "",
-  database: process.env.DB_NAME || "giltechdb",
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
-});
-
-try {
-  const connection = await pool.getConnection();
-  console.log("✅ Connected to MySQL");
-  connection.release();
-} catch (error) {
-  console.error("❌ DB Connection Error:", error);
-}
-
-export default pool;
-// DB pool exported for use by application code
+# Create the database connection
+connection = mysql.connector.connect(
+    host=os.getenv("DB_HOST"),
+    user=os.getenv("DB_USER"),
+    password=os.getenv("DB_PASSWORD"),
+    database=os.getenv("DB_NAME"),
+    port=os.getenv("DB_PORT")
+)
