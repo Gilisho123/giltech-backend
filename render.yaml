@@ -1,26 +1,61 @@
-# Example Render manifest to deploy the Giltech backend
-# Instructions:
-# 1) Create a new Web Service on Render and connect your GitHub repository.
-# 2) Copy this file to the repo root (it's already here) and Render will use it.
+# Render Deployment Manifest for Giltech Online Cyber Backend
+# Deploy instructions:
+# 1. Push this file to your backend repository root.
+# 2. Create a new "Web Service" on Render linked to this repo.
+# 3. Choose Node.js environment.
+# 4. Add environment variables in Render dashboard or use these defaults.
 
 services:
-  - type: web_service
+  - type: web
     name: giltech-backend
     env: node
     plan: free
     branch: main
-    buildCommand: ""
-    startCommand: "node server.js"
+
+    buildCommand: |
+      npm install
+
+    startCommand: |
+      node server.js
+
+    autoDeploy: true
+
     envVars:
+      # MySQL database connection (Render-managed or external)
       - key: DB_HOST
-        value: <your-db-host> # or use Render's managed database
+        fromDatabase:
+          name: giltech-db
+          property: host
       - key: DB_USER
-        value: <db-user>
+        fromDatabase:
+          name: giltech-db
+          property: user
       - key: DB_PASS
-        value: <db-pass>
+        fromDatabase:
+          name: giltech-db
+          property: password
       - key: DB_NAME
-        value: giltechdb
+        fromDatabase:
+          name: giltech-db
+          property: database
+
+      # JWT secret for user auth
       - key: JWT_SECRET
-        value: <strong-secret>
-      - key: ADMIN_TOKEN
+        generateValue: true
+
+      # Optional token for admin tool setup
+      - key: ADMIN_TOOL_TOKEN
         value: testtoken
+
+      # Allow your frontend on Vercel
+      - key: FRONTEND_URL
+        value: https://giltech-frontend.vercel.app
+
+      # Default backend port
+      - key: PORT
+        value: 5000
+
+databases:
+  - name: giltech-db
+    plan: free
+    databaseName: giltechdb
